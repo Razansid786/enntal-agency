@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
 import {
   ArrowLeft,
   ArrowRight,
@@ -32,6 +32,25 @@ const services = [
     text: 'We map your manual handoffs and ship end-to-end operational automations.',
     bullets: ['Workflow mapping', 'n8n / Make', 'Approval logic', 'Audit-ready trails'],
     tags: ['Framer', 'Node JS', 'HTML', 'WordPress'],
+    panelIcons: [Workflow, GitBranch, Database, ShieldCheck],
+    signalStyle: 'pipeline',
+    surface: 'linear-gradient(158deg, rgba(255,255,255,0.96), rgba(236,245,255,0.9))',
+    backGradient: 'linear-gradient(152deg, #102238, #1a3656)',
+    frontStats: [
+      { label: 'Flows shipped', value: '32+' },
+      { label: 'Cycle reduction', value: '58%' },
+    ],
+    detailCards: [
+      { icon: Workflow, text: 'Map manual flow and decision points.' },
+      { icon: GitBranch, text: 'Branching logic with controlled approvals.' },
+      { icon: Database, text: 'Reliable state sync across tools.' },
+      { icon: ShieldCheck, text: 'Audit-ready logs and recoverable runs.' },
+    ],
+    hoverHighlights: [
+      { label: 'Automation depth', value: 'End-to-end' },
+      { label: 'Approval model', value: 'Role-based' },
+      { label: 'Monitoring', value: 'Live pipeline logs' },
+    ],
   },
   {
     id: '02',
@@ -40,6 +59,25 @@ const services = [
     text: 'Deploy practical agents that reason over your context and execute safe actions.',
     bullets: ['Knowledge pipelines', 'Action guardrails', 'Human approvals', 'Observability'],
     tags: ['Agents', 'Vector DB', 'RAG', 'Prompt Ops'],
+    panelIcons: [Bot, Database, Network, ShieldCheck],
+    signalStyle: 'orbit',
+    surface: 'linear-gradient(156deg, rgba(255,255,255,0.96), rgba(240,249,246,0.9))',
+    backGradient: 'linear-gradient(152deg, #132836, #1b4a54)',
+    frontStats: [
+      { label: 'Agent actions', value: '120k+' },
+      { label: 'Resolution rate', value: '84%' },
+    ],
+    detailCards: [
+      { icon: Bot, text: 'Agent behavior tuned for real tasks.' },
+      { icon: Database, text: 'Knowledge retrieval grounded in context.' },
+      { icon: Network, text: 'Action orchestration with safe connectors.' },
+      { icon: ShieldCheck, text: 'Guardrails plus human handoff checkpoints.' },
+    ],
+    hoverHighlights: [
+      { label: 'Reasoning context', value: 'RAG + memory' },
+      { label: 'Action control', value: 'Permission scoped' },
+      { label: 'Quality loop', value: 'Trace + evals' },
+    ],
   },
   {
     id: '03',
@@ -48,6 +86,25 @@ const services = [
     text: 'Build management systems that match your operations, not generic templates.',
     bullets: ['Role dashboards', 'Business modules', 'Document engines', 'Team workflows'],
     tags: ['CRM Core', 'Portals', 'Dashboards', 'Approvals'],
+    panelIcons: [Layers3, Database, Globe, ShieldCheck],
+    signalStyle: 'stack',
+    surface: 'linear-gradient(158deg, rgba(255,255,255,0.96), rgba(244,241,255,0.9))',
+    backGradient: 'linear-gradient(152deg, #1a2548, #2f2f64)',
+    frontStats: [
+      { label: 'Modules deployed', value: '14' },
+      { label: 'Teams onboarded', value: '9' },
+    ],
+    detailCards: [
+      { icon: Layers3, text: 'Modular architecture by business domain.' },
+      { icon: Database, text: 'Clean data model with entity controls.' },
+      { icon: Globe, text: 'Portal views across departments and vendors.' },
+      { icon: ShieldCheck, text: 'Permissions mapped to real org structure.' },
+    ],
+    hoverHighlights: [
+      { label: 'System fit', value: 'Ops-native UX' },
+      { label: 'Document layer', value: 'Template + versioning' },
+      { label: 'Rollout path', value: 'Phased migration' },
+    ],
   },
   {
     id: '04',
@@ -56,6 +113,25 @@ const services = [
     text: 'Ship production-grade product experiences backed by robust system architecture.',
     bullets: ['Product architecture', 'Web + mobile', 'QA pipelines', 'Performance tuning'],
     tags: ['iOS', 'Android', 'React', 'API Layer'],
+    panelIcons: [Smartphone, Globe, Cpu, GitBranch],
+    signalStyle: 'devices',
+    surface: 'linear-gradient(158deg, rgba(255,255,255,0.96), rgba(255,243,235,0.9))',
+    backGradient: 'linear-gradient(152deg, #2d2130, #4d2d2f)',
+    frontStats: [
+      { label: 'Release cadence', value: 'Bi-weekly' },
+      { label: 'Perf score', value: '95+' },
+    ],
+    detailCards: [
+      { icon: Smartphone, text: 'Mobile UX tuned for real usage patterns.' },
+      { icon: Globe, text: 'Web app consistency across user journeys.' },
+      { icon: Cpu, text: 'API and backend performance optimization.' },
+      { icon: GitBranch, text: 'Stable release pipelines and QA gates.' },
+    ],
+    hoverHighlights: [
+      { label: 'Platform spread', value: 'Web + iOS + Android' },
+      { label: 'Reliability', value: 'Structured QA pipeline' },
+      { label: 'Scale ready', value: 'Service-oriented backend' },
+    ],
   },
 ]
 
@@ -130,6 +206,10 @@ const reveal = {
 export default function Home() {
   const [activeStudy, setActiveStudy] = useState(0)
   const [showDetails, setShowDetails] = useState(false)
+  const [viewportWidth, setViewportWidth] = useState(() => (typeof window === 'undefined' ? 1200 : window.innerWidth))
+
+  const servicesSectionRef = useRef(null)
+  const shouldReduceMotion = useReducedMotion()
 
   const currentStudy = studies[activeStudy]
 
@@ -140,6 +220,45 @@ export default function Home() {
     }, 4000)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isDesktop = viewportWidth >= 768
+
+  const desktopStackProfiles = useMemo(
+    () => [
+      { x: 180, y: 150, rotate: -7, scale: 0.95, zIndex: 10 },
+      { x: -170, y: 125, rotate: 6, scale: 0.93, zIndex: 9 },
+      { x: 170, y: -425, rotate: -5, scale: 0.91, zIndex: 8 },
+      { x: -180, y: -440, rotate: 7, scale: 0.89, zIndex: 7 },
+    ],
+    []
+  )
+
+  const mobileStackProfiles = useMemo(
+    () => [
+      { x: 0, y: 0, rotate: -3, scale: 1, zIndex: 10 },
+      { x: 10, y: -570, rotate: 2, scale: 0.98, zIndex: 9 },
+      { x: -8, y: -1140, rotate: -2, scale: 0.96, zIndex: 8 },
+      { x: 12, y: -1710, rotate: 3, scale: 0.94, zIndex: 7 },
+    ],
+    []
+  )
+
+  const { scrollYProgress: servicesProgressRaw } = useScroll({
+    target: servicesSectionRef,
+    offset: ['start 88%', 'start 35%'],
+  })
+
+  const servicesProgress = useSpring(servicesProgressRaw, {
+    stiffness: 168,
+    damping: 24,
+    mass: 0.38,
+  })
 
   const stats = useMemo(
     () => [
@@ -280,7 +399,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <section id="services" className="pop-on-scroll mx-auto w-full max-w-7xl px-6 py-14 md:px-12">
+        <section id="services" ref={servicesSectionRef} className="pop-on-scroll mx-auto w-full max-w-7xl px-6 py-14 md:px-12">
           <SectionMarker label="How We Help" />
           <p className="text-label mb-4" style={{ color: 'rgba(17,26,40,0.76)' }}>
             Services
@@ -289,75 +408,20 @@ export default function Home() {
             Services that remove bottlenecks and turn operations into scalable systems.
           </h2>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="services-stack-grid mt-8 grid gap-4 md:grid-cols-2">
             {services.map((service, index) => {
-              const Icon = service.icon
+              const stackProfile = (isDesktop ? desktopStackProfiles : mobileStackProfiles)[index]
+
               return (
-                <motion.article
+                <ServiceStackCard
                   key={service.id}
-                  initial={{ opacity: 0, y: 26 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.25 }}
-                  transition={{ duration: 0.62, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  className="pop-on-scroll service-card service-hover-card relative overflow-hidden rounded-[1.7rem] border p-6 md:p-7"
-                  style={{
-                    borderColor: 'rgba(30,43,60,0.13)',
-                    background: 'rgba(255,255,255,0.92)',
-                    minHeight: '560px',
-                  }}
+                  service={service}
+                  index={index}
+                  progress={servicesProgress}
+                  stackProfile={stackProfile}
+                  shouldReduceMotion={shouldReduceMotion}
                 >
-                  <IconGridBackdrop icon={Icon} muted={false} />
-
-                  <div className="service-front relative z-10">
-                    <p className="text-label mb-3">Service {service.id}</p>
-                    <h3 style={{ color: 'var(--ink)', fontSize: '1.7rem', letterSpacing: '-0.01em', lineHeight: 1.15, fontWeight: 600 }}>
-                      {service.title}
-                    </h3>
-                    <p className="mt-3" style={{ color: 'var(--ash)', lineHeight: 1.72, fontWeight: 500 }}>
-                      {service.text}
-                    </p>
-                    <ServiceBadgeVisual tags={service.tags} />
-                  </div>
-
-                  <div
-                    className="service-back absolute inset-0 z-20 rounded-[1.7rem] border p-6 md:p-7"
-                    style={{
-                      borderColor: 'rgba(17,26,40,0.2)',
-                      background: 'linear-gradient(152deg, #111a28, #1e2e44)',
-                    }}
-                  >
-                    <p className="text-label mb-3" style={{ color: 'rgba(255,255,255,0.64)' }}>Service {service.id} details</p>
-                    <h3 style={{ color: '#ffffff', fontSize: '1.7rem', letterSpacing: '-0.01em', lineHeight: 1.15, fontWeight: 600 }}>
-                      {service.title}
-                    </h3>
-                    <p className="mt-3" style={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.72 }}>
-                      {service.text}
-                    </p>
-                    <div className="mt-5 grid grid-cols-2 gap-2 md:gap-3">
-                      <IconDetail icon={Workflow} text="Process mapping and automation flow" />
-                      <IconDetail icon={Bot} text="AI execution and orchestration" />
-                      <IconDetail icon={Database} text="Reliable data synchronization" />
-                      <IconDetail icon={ShieldCheck} text="Secure monitored delivery" />
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2 overflow-hidden">
-                      {service.bullets.map((bullet) => (
-                        <span
-                          key={bullet}
-                          className="rounded-full border px-4 py-2"
-                          style={{
-                            borderColor: 'rgba(255,255,255,0.24)',
-                            fontSize: '0.7rem',
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,0.92)',
-                          }}
-                        >
-                          {bullet}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </motion.article>
+                </ServiceStackCard>
               )
             })}
           </div>
@@ -649,7 +713,12 @@ export default function Home() {
           }
 
           .service-card {
-            transition: transform 0.32s ease, box-shadow 0.32s ease;
+            transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+          }
+
+          .services-stack-grid {
+            perspective: 1200px;
+            transform-style: preserve-3d;
           }
 
           .service-card:hover {
@@ -658,20 +727,20 @@ export default function Home() {
           }
 
           .service-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1), background 0.24s cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           .service-front {
             opacity: 1;
             transform: translateY(0);
-            transition: opacity 0.34s ease, transform 0.34s ease;
+            transition: opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1), transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           .service-back {
             opacity: 0;
             transform: translateY(14px);
             pointer-events: none;
-            transition: opacity 0.34s ease, transform 0.34s ease;
+            transition: opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1), transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           .service-hover-card:hover .service-front {
@@ -750,22 +819,132 @@ function HeroOrbitBoard() {
   )
 }
 
-function ServiceBadgeVisual({ tags }) {
+function ServiceStackCard({ service, index, progress, stackProfile, shouldReduceMotion }) {
+  const Icon = service.icon
+
+  const x = useTransform(progress, [0, 1], [stackProfile.x, 0])
+  const y = useTransform(progress, [0, 1], [stackProfile.y, 0])
+  const rotate = useTransform(progress, [0, 1], [stackProfile.rotate, 0])
+  const scale = useTransform(progress, [0, 1], [stackProfile.scale, 1])
+  const opacity = useTransform(progress, [0, 0.22, 1], [0.7, 0.9, 1])
+
+  return (
+    <motion.article
+      className="pop-on-scroll service-card service-hover-card relative overflow-hidden rounded-[1.7rem] border p-6 md:p-7"
+      style={{
+        borderColor: 'rgba(30,43,60,0.13)',
+        background: service.surface,
+        minHeight: '560px',
+        x: shouldReduceMotion ? 0 : x,
+        y: shouldReduceMotion ? 0 : y,
+        rotate: shouldReduceMotion ? 0 : rotate,
+        scale: shouldReduceMotion ? 1 : scale,
+        opacity: shouldReduceMotion ? 1 : opacity,
+        zIndex: stackProfile.zIndex,
+        willChange: 'transform, opacity',
+      }}
+      transition={{ duration: 0.62, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+      whileInView={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <IconGridBackdrop icon={Icon} muted={false} />
+
+      <div className="service-front relative z-10 flex h-full flex-col">
+        <p className="text-label mb-3">Service {service.id}</p>
+        <h3 style={{ color: 'var(--ink)', fontSize: '1.7rem', letterSpacing: '-0.01em', lineHeight: 1.15, fontWeight: 600 }}>
+          {service.title}
+        </h3>
+        <p className="mt-3" style={{ color: 'var(--ash)', lineHeight: 1.72, fontWeight: 500 }}>
+          {service.text}
+        </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          {service.frontStats.map((item) => (
+            <div key={item.label} className="rounded-xl border px-3 py-2" style={{ borderColor: 'rgba(17,26,40,0.14)', background: 'rgba(255,255,255,0.78)' }}>
+              <p style={{ color: 'var(--ink)', fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.2 }}>{item.value}</p>
+              <p style={{ color: 'var(--ash)', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <ServiceBadgeVisual tags={service.tags} panelIcons={service.panelIcons} />
+
+        <div className="mt-4">
+          <ServiceSignalBoard service={service} shouldReduceMotion={shouldReduceMotion} />
+        </div>
+      </div>
+
+      <div
+        className="service-back absolute inset-0 z-20 rounded-[1.7rem] border p-6 md:p-7"
+        style={{
+          borderColor: 'rgba(17,26,40,0.2)',
+          background: service.backGradient,
+        }}
+      >
+        <div className="flex h-full flex-col">
+          <p className="text-label mb-3" style={{ color: 'rgba(255,255,255,0.64)' }}>Service {service.id} details</p>
+          <h3 style={{ color: '#ffffff', fontSize: '1.7rem', letterSpacing: '-0.01em', lineHeight: 1.15, fontWeight: 600 }}>
+            {service.title}
+          </h3>
+          <p className="mt-3" style={{ color: 'rgba(255,255,255,0.82)', lineHeight: 1.68 }}>
+            {service.text}
+          </p>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {service.hoverHighlights.map((item) => (
+              <div key={item.label} className="rounded-lg border px-2 py-2" style={{ borderColor: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.07)' }}>
+                <p style={{ color: 'white', fontSize: '0.72rem', fontWeight: 600, lineHeight: 1.3 }}>{item.value}</p>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.62rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>{item.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 md:gap-3">
+            {service.detailCards.map((card) => (
+              <IconDetail key={card.text} icon={card.icon} text={card.text} />
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 overflow-hidden">
+            {service.bullets.map((bullet) => (
+              <span
+                key={bullet}
+                className="rounded-full border px-4 py-2"
+                style={{
+                  borderColor: 'rgba(255,255,255,0.24)',
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              >
+                {bullet}
+              </span>
+            ))}
+          </div>
+
+        </div>
+      </div>
+    </motion.article>
+  )
+}
+
+function ServiceBadgeVisual({ tags, panelIcons }) {
   return (
     <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: 'rgba(17,26,40,0.12)', background: 'rgba(255,255,255,0.65)' }}>
       <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border" style={{ borderColor: 'rgba(17,26,40,0.16)' }}>
-          <Cpu size={18} style={{ color: 'var(--ink)' }} />
-        </div>
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border" style={{ borderColor: 'rgba(17,26,40,0.16)' }}>
-          <GitBranch size={18} style={{ color: 'var(--ink)' }} />
-        </div>
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border" style={{ borderColor: 'rgba(17,26,40,0.16)' }}>
-          <ShieldCheck size={18} style={{ color: 'var(--ink)' }} />
-        </div>
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border" style={{ borderColor: 'rgba(17,26,40,0.16)' }}>
-          <Globe size={18} style={{ color: 'var(--ink)' }} />
-        </div>
+        {panelIcons.map((Icon, idx) => (
+          <motion.div
+            key={`panel-${idx}`}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+            style={{ borderColor: 'rgba(17,26,40,0.16)' }}
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.2 }}
+          >
+            <Icon size={18} style={{ color: 'var(--ink)' }} />
+          </motion.div>
+        ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {tags.map((tag) => (
@@ -776,6 +955,94 @@ function ServiceBadgeVisual({ tags }) {
           >
             {tag}
           </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ServiceSignalBoard({ service, shouldReduceMotion }) {
+  if (service.signalStyle === 'pipeline') {
+    return (
+      <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(17,26,40,0.13)', background: 'rgba(255,255,255,0.75)' }}>
+        <p className="text-label mb-2">Pipeline pulse</p>
+        <div className="grid grid-cols-3 gap-2">
+          {service.bullets.slice(0, 3).map((item, idx) => (
+            <motion.div
+              key={item}
+              className="rounded-lg border px-2 py-2"
+              style={{ borderColor: 'rgba(17,26,40,0.14)', background: 'rgba(255,255,255,0.88)' }}
+              animate={shouldReduceMotion ? undefined : { opacity: [0.72, 1, 0.72] }}
+              transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.22 }}
+            >
+              <p style={{ color: 'var(--ink)', fontSize: '0.68rem', lineHeight: 1.35 }}>{item}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (service.signalStyle === 'orbit') {
+    return (
+      <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(17,26,40,0.13)', background: 'rgba(255,255,255,0.75)' }}>
+        <p className="text-label mb-2">Agent activity</p>
+        <div className="relative h-20">
+          <motion.div
+            className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border"
+            style={{ borderColor: 'rgba(17,26,40,0.18)', background: 'rgba(17,26,40,0.08)' }}
+            animate={shouldReduceMotion ? undefined : { scale: [1, 1.12, 1] }}
+            transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          {[0, 1, 2].map((dot) => (
+            <motion.span
+              key={dot}
+              className="absolute h-3 w-3 rounded-full"
+              style={{ background: 'var(--ink)', left: `${22 + dot * 24}%`, top: `${20 + dot * 16}%` }}
+              animate={shouldReduceMotion ? undefined : { y: [0, -5, 0], opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: dot * 0.18 }}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (service.signalStyle === 'stack') {
+    return (
+      <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(17,26,40,0.13)', background: 'rgba(255,255,255,0.75)' }}>
+        <p className="text-label mb-2">System layers</p>
+        <div className="space-y-2">
+          {['Access layer', 'Data layer', 'Workflow layer'].map((layer, idx) => (
+            <motion.div
+              key={layer}
+              className="rounded-lg border px-3 py-2"
+              style={{ borderColor: 'rgba(17,26,40,0.14)', background: 'rgba(255,255,255,0.88)' }}
+              animate={shouldReduceMotion ? undefined : { x: [0, 4, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.22 }}
+            >
+              <p style={{ color: 'var(--ink)', fontSize: '0.7rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{layer}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(17,26,40,0.13)', background: 'rgba(255,255,255,0.75)' }}>
+      <p className="text-label mb-2">Product release board</p>
+      <div className="grid grid-cols-2 gap-2">
+        {['UX', 'API', 'QA', 'Deploy'].map((item, idx) => (
+          <motion.div
+            key={item}
+            className="rounded-lg border px-3 py-2"
+            style={{ borderColor: 'rgba(17,26,40,0.14)', background: 'rgba(255,255,255,0.88)' }}
+            animate={shouldReduceMotion ? undefined : { y: [0, -3, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.12 }}
+          >
+            <p style={{ color: 'var(--ink)', fontSize: '0.68rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{item}</p>
+          </motion.div>
         ))}
       </div>
     </div>
